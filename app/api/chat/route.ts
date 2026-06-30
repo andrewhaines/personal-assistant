@@ -1,4 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk';
+import { supabase } from '@/lib/supabase';
 
 const client = new Anthropic();
 
@@ -12,5 +13,15 @@ export async function POST(req: Request) {
     messages,
   });
 
-  return Response.json({ content: response.content[0].type === 'text' ? response.content[0].text : '' });
+  const assistantMessage = response.content[0].type === 'text'
+    ? response.content[0].text : '';
+
+  // Save the latest user message and assistant reply
+  const latest = messages[messages.length - 1];
+  await supabase.from('conversations').insert([
+    { role: 'user', content: latest.content },
+    { role: 'assistant', content: assistantMessage },
+  ]);
+
+  return Response.json({ content: assistantMessage });
 }
